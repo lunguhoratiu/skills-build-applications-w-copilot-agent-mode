@@ -40,6 +40,11 @@ export async function createTeam(input: unknown) {
   if ((await User.countDocuments({ _id: { $in: memberIds } })) !== memberIds.length) throw httpError(400, 'Every member must be an existing user');
 
   const team = await Team.create({ name: name.trim(), mascot: mascot.trim(), members: memberIds });
+  if (memberIds.length > 0) {
+    // A user belongs to one team, so move members out of any previous team.
+    await Team.updateMany({ _id: { $ne: team._id }, members: { $in: memberIds } }, { $pull: { members: { $in: memberIds } } });
+    await User.updateMany({ _id: { $in: memberIds } }, { $set: { team: team._id } });
+  }
   return team.toJSON();
 }
 
